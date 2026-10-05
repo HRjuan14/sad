@@ -1,1 +1,2 @@
-Practica 01
+Paso 1:
+- Primero clonamos la carpeta 
