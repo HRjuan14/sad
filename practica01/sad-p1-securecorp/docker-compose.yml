@@ -1,0 +1,70 @@
+# Práctica 1 de SAD · SecureCorp — laboratorio
+#
+# Hasta la Parte C no hace falta tocarlo: todo se maneja con ./lab.sh (./lab.sh ayuda).
+# En la Parte C añades aquí la máquina "web". ANTES haz una copia:
+#     cp docker-compose.yml docker-compose.yml.bak
+#
+#   servidor     -> OpenLDAP + Kerberos de SecureCorp
+#                   (en la red se llama ldap.securecorp.local y kdc.securecorp.local)
+#   cliente      -> el PC de un empleado
+#   phpldapadmin -> el directorio en el navegador: http://localhost:8081
+#
+# Las carpetas pki/ y ldif/ de tu ordenador aparecen DENTRO de las dos máquinas
+# como /pki y /ldif: lo que guardes ahí no se pierde nunca y es lo que entregas.
+
+name: sad-p1
+
+services:
+
+  servidor:
+    build: .
+    image: sad-p1-securecorp
+    container_name: sad-p1-servidor
+    hostname: servidor
+    command: ["/usr/local/bin/arranque-servidor.sh"]
+    volumes:
+      - ./pki:/pki
+      - ./ldif:/ldif
+      - ./krb5/krb5.conf:/etc/krb5.conf:ro
+      - ./krb5/kdc.conf:/etc/krb5kdc/kdc.conf:ro
+    networks:
+      securecorp:
+        aliases:
+          - ldap.securecorp.local
+          - kdc.securecorp.local
+    tty: true
+    stdin_open: true
+
+  cliente:
+    image: sad-p1-securecorp
+    container_name: sad-p1-cliente
+    hostname: cliente
+    volumes:
+      - ./pki:/pki
+      - ./ldif:/ldif
+      - ./krb5/krb5.conf:/etc/krb5.conf:ro
+    networks:
+      - securecorp
+    depends_on:
+      - servidor
+    tty: true
+    stdin_open: true
+
+  phpldapadmin:
+    image: osixia/phpldapadmin:0.9.0
+    container_name: sad-p1-phpldapadmin
+    environment:
+      PHPLDAPADMIN_LDAP_HOSTS: ldap.securecorp.local
+      PHPLDAPADMIN_HTTPS: "false"
+    ports:
+      - "8081:80"
+    networks:
+      - securecorp
+    depends_on:
+      - servidor
+
+  # ✍️ Parte C: aquí va el servicio web
+
+networks:
+  securecorp:
+    driver: bridge

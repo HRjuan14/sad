@@ -1,0 +1,22 @@
+# 👀 EJEMPLO — Ya está hecho. Cárgalo tal cual y míralo bien: te servirá de modelo.
+#
+# Crea las dos "carpetas" del directorio (people y groups) y a la primera empleada, Lucía.
+
+dn: ou=people,dc=securecorp,dc=local
+objectClass: organizationalUnit
+ou: people
+
+dn: ou=groups,dc=securecorp,dc=local
+objectClass: organizationalUnit
+ou: groups
+
+dn: uid=lromero,ou=people,dc=securecorp,dc=local
+objectClass: inetOrgPerson
+objectClass: posixAccount
+uid: lromero
+cn: Lucia Romero
+sn: Romero
+mail: lromero@securecorp.local
+uidNumber: 10002
+gidNumber: 10002
+homeDirectory: /home/lromero

@@ -1,0 +1,13 @@
+# ✍️ TU TURNO — Escribe aquí debajo 4 entradas. Usa 01-ejemplo.ldif como modelo.
+#
+#   1. TÚ             uid = tu usuario     uidNumber/gidNumber 10001
+#   2. Marta Torres   uid = mtorres        uidNumber/gidNumber 10003
+#   3. El grupo rrhh      con Lucía y Marta
+#   4. El grupo sistemas  contigo
+#
+# Recuerda:
+#   - Una LÍNEA EN BLANCO entre cada entrada.
+#   - Sin tildes ni eñes (Marta Torres, no Martá).
+#   - Los grupos van en ou=groups. Mira en el enunciado cómo es un grupo.
+#   - En "member" va el DN COMPLETO de la persona, no solo su uid.
+
