@@ -21,8 +21,26 @@ C = ES, O = SecureCorp, CN = Juan Root CA - Juan Herrador. La fecha válida es h
 
 ```
 a) miembros de rrhh:
+ldapsearch -x -LLL -H ldap://ldap.securecorp.local -b "ou=groups,dc=securecorp,dc=local" "(cn=rrhh)" member
+
+dn: cn=rrhh,ou=groups,dc=securecorp,dc=local
+member: uid=lromero,ou=people,dc=securecorp,dc=local
+member: uid=mtorres,ou=people,dc=securecorp,dc=local
 
 b) cn y mail de todas las personas:
+ldapsearch -x -LLL -H ldap://ldap.securecorp.local -b "ou=people,dc=securecorp,dc=local" "(objectClass=inetOrgPerson)" cn mail
+
+dn: uid=lromero,ou=people,dc=securecorp,dc=local
+cn: Lucia Romero
+mail: lromero@securecorp.local
+
+dn: uid=jherrador,ou=people,dc=securecorp,dc=local
+cn: Juan Herrador
+mail: jherrador@securecorp.local
+
+dn: uid=mtorres,ou=people,dc=securecorp,dc=local
+cn: Marta Torres
+mail: mtorres@securecorp.local
 
 ```
 
