@@ -1,14 +1,14 @@
 # ✍️ Le dice a slapd dónde están los certificados.
-# Cambia cada ____ por la ruta COMPLETA del fichero en /etc/ldap/tls/
+# Cambia cada  por la ruta COMPLETA del fichero en /etc/ldap/tls/
 # Se aplica EN EL SERVIDOR con:   ldapmodify -Y EXTERNAL -H ldapi:/// -f /ldif/03-tls.ldif
 
 dn: cn=config
 changetype: modify
 replace: olcTLSCACertificateFile
-olcTLSCACertificateFile: ____ (el certificado de la CA)
+olcTLSCACertificateFile: /etc/ldap/tls/ca.crt
 -
 replace: olcTLSCertificateFile
-olcTLSCertificateFile: ____ (el certificado del servidor)
+olcTLSCertificateFile: /etc/ldap/tls/ldap.crt
 -
 replace: olcTLSCertificateKeyFile
-olcTLSCertificateKeyFile: ____ (la clave privada del servidor)
+olcTLSCertificateKeyFile: /etc/ldap/tls/ldap.key

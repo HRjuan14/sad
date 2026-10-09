@@ -46,24 +46,52 @@ mail: mtorres@securecorp.local
 
 **3. (A4)** ¿Por qué la clave `ldap.key` tiene que ser de `openldap` y tener permisos 600?
 
+Pertenencia a openldap: Porque el servicio LDAP no se ejecuta como root, 
+sino como el usuario openldap, y necesita ser el dueño para poder leerla.
+Permisos 600: Para que solo openldap pueda leerla y escribirla (-rw-------). 
+Si la leen otros usuarios, la seguridad del servidor se rompe.
 
 **4. (A4)** ¿Qué valor has puesto en `SLAPD_SERVICES` y por qué?
 
+Valor: SLAPD_SERVICES="ldaps:/// ldapi:///"
+Por qué: ldaps:/// abre el puerto 636 cifrado y ldapi:/// permite administrar el servidor en local. 
+Quitamos ldap:/// para cerrar el puerto 389 y 
+prohibir conexiones sin cifrar.
 
 **5. (A4)** Antes de añadir `TLS_CACERT` en el cliente, `ldaps://` no funcionaba. ¿Por qué?
 
+Porque nuestra CA es privada y el cliente no confía en ella por defecto.
+ Sin TLS_CACERT, el cliente no puede validar el certificado del servidor y 
+corta la conexión por seguridad.
 
 **6. (B3)** Pega la salida de `klist` con tus dos tickets. ¿Para qué sirve cada uno? ¿Ha viajado tu
 contraseña por la red?
 
 ```
+root@CLIENTE:~# klist
+Ticket cache: FILE:/tmp/krb5cc_0
+Default principal: jherrador@SECURECORP.LOCAL
+
+Valid starting     Expires            Service principal
+10/09/26 14:33:50  10/10/26 00:33:50  krbtgt/SECURECORP.LOCAL@SECURECORP.LOCAL
+	renew until 10/16/26 14:33:50
+10/09/26 14:34:13  10/10/26 00:33:50  host/web.securecorp.local@SECURECORP.LOCAL
+	renew until 10/16/26 14:33:50
 
 ```
 
 **7. (C)** En el `docker-compose.yml`, ¿qué diferencia hay entre `build:` e `image:`? ¿Qué
 significa la línea `- "8081:80"` del servicio `phpldapadmin`?
 
+build: vs image:: build: crea la imagen desde un Dockerfile local; 
+image: la descarga ya hecha de Docker Hub.
+
+- "8081:80": Mapea el puerto 8081 de mi PC al 80 del contenedor
+ para abrir phpldapadmin en http://localhost:8081.
 
 **8. (C)** ¿Por qué en la máquina `web` no has tenido que escribir a mano `TLS_CACERT`, y en el
 cliente sí? ¿Qué pasaría con esa línea del cliente si hicieras `./lab.sh reset`?
 
+Porque lo metí en su Dockerfile y ya viene grabado en la imagen.
+Se borra. Al no estar en el Dockerfile ni en un volumen, 
+se pierde al recrear el contenedor.
