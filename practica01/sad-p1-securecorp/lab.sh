@@ -87,6 +87,10 @@ ${N}Laboratorio SecureCorp — Práctica 1 de SAD${X}
   ${N}./lab.sh estado${X}       ¿Están encendidas las máquinas?
   ${N}./lab.sh comprobar${X}    Corrige tu práctica: qué está hecho y qué falta
   ${N}./lab.sh entregar${X}     Genera el fichero .zip para subir a Moodle
+  ${N}./lab.sh cargar DIR${X}   (PROFESOR) Poner aquí las máquinas de una entrega descomprimida
+  ${N}./lab.sh guardar${X}      Guardar tu trabajo de dentro de las máquinas en copia/ (se hace
+                        automáticamente al salir de una máquina y al parar). Para llevártelo a
+                        casa, copia TODA la carpeta del kit y allí haz ./lab.sh arrancar
   ${N}./lab.sh parar${X}        Apagar las máquinas (no se pierde nada)
   ${N}./lab.sh reset${X}        ${R}Borrar las máquinas y empezar de cero${X} (pki/ y ldif/ se conservan)
 
@@ -127,9 +131,74 @@ cmd_preparar() {
     echo; bien "Listo. Ahora:  ./lab.sh arrancar"
 }
 
+# ---------- copia de las máquinas (para llevarte el trabajo a casa) ----------
+# Lo que haces DENTRO de las máquinas (slapd, TLS, directorio, Kerberos, /root...) se guarda
+# en la carpeta copia/ del kit. Si te llevas la carpeta del kit a otro ordenador, al hacer
+# ./lab.sh arrancar allí las máquinas aparecen tal y como las dejaste.
+COPIA=copia
+RUTAS_SRV="/etc/default/slapd /etc/ldap /var/lib/ldap /etc/krb5kdc /var/lib/krb5kdc /var/log/krb5kdc.log /root"
+RUTAS_CLI="/etc/ldap /root"
+rutas_de() { case $1 in "$SRV") echo "$RUTAS_SRV" ;; *) echo "$RUTAS_CLI" ;; esac; }
+
+guardar_maquinas() {   # guardar_maquinas [silencio]
+    local c n=0
+    mkdir -p "$COPIA"
+    for c in "$SRV" "$CLI" "$WEB"; do
+        esta_corriendo "$c" || continue
+        # kdc.conf y krb5.conf vienen del kit (montados), no se guardan
+        if docker exec "$c" bash -c "cd / && r=''; for p in $(rutas_de "$c"); do [ -e \"\$p\" ] && r=\"\$r \${p#/}\"; done; \
+               tar -cpf - --numeric-owner --exclude=etc/krb5kdc/kdc.conf --exclude=root/.cache \$r" 2>/dev/null \
+               | gzip > "$COPIA/$c.tar.gz.tmp" && [ -s "$COPIA/$c.tar.gz.tmp" ]; then
+            mv "$COPIA/$c.tar.gz.tmp" "$COPIA/$c.tar.gz"; n=$((n+1))
+        else
+            rm -f "$COPIA/$c.tar.gz.tmp"; aviso "No he podido guardar $c"
+        fi
+    done
+    [ -n "${1:-}" ] || { [ "$n" -gt 0 ] && bien "Máquinas guardadas en $COPIA/ ($n)" || aviso "No había máquinas encendidas que guardar."; }
+}
+
+# Máquinas recién creadas (otro ordenador, o después de cargar): les devolvemos lo guardado
+restaurar_maquinas() {
+    local c
+    for c in "$SRV" "$CLI" "$WEB"; do
+        [ -s "$COPIA/$c.tar.gz" ] && docker inspect "$c" >/dev/null 2>&1 || continue
+        gunzip -c "$COPIA/$c.tar.gz" | docker cp -a - "$c:/" && bien "Restaurada $c desde $COPIA/"
+    done
+}
+
+cmd_guardar() {
+    necesita_lab
+    devolver_permisos
+    guardar_maquinas
+    echo "   Para seguir en otro ordenador llévate TODA la carpeta del kit (USB, Drive...)."
+    echo "   Allí: ./lab.sh preparar (solo la 1.ª vez) y ./lab.sh arrancar."
+}
+
+# (DOCENTE) Cargar el laboratorio de un alumno: la carpeta de su entrega ya descomprimida
+cmd_cargar() {
+    necesita_docker
+    local d=${1:-}
+    [ -d "$d/$COPIA" ] || { error "Uso: ./lab.sh cargar CARPETA   (la carpeta de una entrega descomprimida, con $COPIA/ dentro)"; exit 1; }
+    echo "${R}${N}Esto BORRA las máquinas de este ordenador${X} y pone las de: $d"
+    read -r -p "Escribe BORRAR para confirmar: " r
+    [ "$r" = "BORRAR" ] || { echo "Cancelado."; exit 0; }
+    docker compose down >/dev/null 2>&1
+    rm -rf "$COPIA" && cp -r "$d/$COPIA" "$COPIA"
+    local f
+    for f in pki ldif web; do [ -d "$d/$f" ] && rm -rf "$f" && cp -r "$d/$f" "$f"; done
+    for f in docker-compose.yml respuestas.md alumno.conf; do [ -f "$d/$f" ] && cp "$d/$f" "$f"; done
+    docker compose build >/dev/null 2>&1
+    cmd_arrancar
+}
+
 cmd_arrancar() {
     necesita_docker
     [ -f alumno.conf ] || aviso "Aún no has hecho ./lab.sh preparar (tus datos). Hazlo cuando puedas."
+    if ! docker inspect "$SRV" >/dev/null 2>&1 && [ -s "$COPIA/$SRV.tar.gz" ]; then
+        info "Máquinas nuevas en este ordenador: recupero tu trabajo de $COPIA/"
+        docker compose create >/dev/null 2>&1 || { error "No he podido crear las máquinas."; exit 1; }
+        restaurar_maquinas
+    fi
     docker compose up -d || { error "No he podido arrancar. Lee el mensaje de arriba."; exit 1; }
     sleep 2
     cmd_estado
@@ -159,7 +228,8 @@ cmd_entrar() {
     echo "Entrando en el ${N}$quien${X}. Para volver a tu ordenador: ${N}exit${X}"
     docker exec -it -w /root "$cont" bash
     devolver_permisos
-    echo "Has vuelto a TU ordenador."
+    guardar_maquinas silencio
+    echo "Has vuelto a TU ordenador. (Tu trabajo en las máquinas queda guardado en $COPIA/)"
 }
 
 cmd_reiniciar() {
@@ -212,6 +282,7 @@ cmd_logs() {
 cmd_parar() {
     necesita_docker
     devolver_permisos
+    guardar_maquinas
     docker compose stop && bien "Máquinas apagadas. Nada se ha borrado: ./lab.sh arrancar para seguir."
 }
 
@@ -220,9 +291,12 @@ cmd_reset() {
     echo "${R}${N}Esto BORRA el servidor y el cliente:${X} el directorio LDAP, el reino Kerberos y"
     echo "toda la configuración que hayas hecho dentro de las máquinas."
     echo "Se conservan tus carpetas pki/ y ldif/ (certificados y LDIF) y respuestas.md."
+    echo "La copia de las máquinas (copia/) pasa a copia.antes-del-reset/ por si te arrepientes."
     read -r -p "Escribe BORRAR para confirmar: " r
     [ "$r" = "BORRAR" ] || { echo "Cancelado."; exit 0; }
     devolver_permisos
+    # Si no, al arrancar se recuperaría lo guardado. Queda una copia por si te arrepientes.
+    [ -d "$COPIA" ] && rm -rf "$COPIA.antes-del-reset" && mv "$COPIA" "$COPIA.antes-del-reset"
     docker compose down && bien "Máquinas borradas. Para empezar de nuevo:  ./lab.sh arrancar"
 }
 
@@ -376,12 +450,34 @@ cmd_entregar() {
     en_srv "cat /var/log/krb5kdc.log" > "$e/05-log-kdc.txt" 2>&1
     docker logs "$SRV" > "$e/06-log-slapd.txt" 2>&1
 
+    # Los ficheros que has editado DENTRO de las máquinas (copia real, no un resumen)
+    info "Copiando lo que has configurado dentro de las máquinas..."
+    copiar_de() {   # copiar_de contenedor carpeta-en-la-entrega ruta...
+        local c=$1 m=$2 r; shift 2
+        docker inspect "$c" >/dev/null 2>&1 || return 0
+        for r in "$@"; do
+            mkdir -p "$e/maquinas/$m$(dirname "$r")"
+            docker cp "$c:$r" "$e/maquinas/$m$r" >/dev/null 2>&1
+        done
+    }
+    copiar_de "$SRV" servidor /etc/default/slapd /etc/ldap/ldap.conf /etc/ldap/slapd.d /etc/ldap/tls \
+        /etc/krb5kdc/kdc.conf /etc/krb5kdc/kadm5.acl /root
+    copiar_de "$CLI" cliente /etc/ldap/ldap.conf /root
+    copiar_de "$WEB" web /etc/ldap/ldap.conf /root
+    en_srv "ls -l /etc/ldap/tls" > "$e/maquinas/servidor/permisos-etc-ldap-tls.txt" 2>&1
+    rm -rf "$e"/maquinas/*/root/.cache
+
     cp -r ldif "$e/ldif"
-    mkdir -p "$e/pki"
-    find pki -name '*.crt' -exec cp --parents {} "$e/" \;
-    find pki -name '*.cnf' -exec cp --parents {} "$e/" \; 2>/dev/null
-    find pki -name '*.ext' -exec cp --parents {} "$e/" \; 2>/dev/null
+    # Todo pki/ (certificados, CSR, .ext, .cnf, .srl...) menos las claves privadas
+    find pki -type f ! -name '*.key' ! -name .gitkeep -exec cp --parents {} "$e/" \;
+    # Ninguna clave privada sale del laboratorio, la llamen como la llamen
+    find "$e/pki" "$e/maquinas" -type f -name '*.key' -delete 2>/dev/null
+    grep -rlZ 'PRIVATE KEY' "$e/pki" "$e/maquinas" 2>/dev/null | xargs -0 rm -f
     [ -f respuestas.md ] && cp respuestas.md "$e/"
+    # Copia restaurable de las máquinas: el profesor puede cargarla con ./lab.sh cargar
+    guardar_maquinas silencio
+    [ -d "$COPIA" ] && cp -r "$COPIA" "$e/$COPIA"
+    cp alumno.conf "$e/"
     cp docker-compose.yml "$e/"
     [ -f web/Dockerfile ] && mkdir -p "$e/web" && cp web/Dockerfile "$e/web/"
 
@@ -394,8 +490,10 @@ cmd_entregar() {
     rm -rf "$d"
     echo
     bien "Entrega generada: ${N}$out${X}"
-    echo "   Lleva: comprobación, certificados (sin claves privadas), directorio, Kerberos, logs,"
-    echo "   tus LDIF, docker-compose.yml, web/Dockerfile y respuestas.md. Súbelo a Moodle."
+    echo "   Lleva: comprobación, tus ficheros de pki/ (sin claves privadas), directorio, Kerberos, logs,"
+    echo "   tus LDIF, docker-compose.yml, web/Dockerfile, respuestas.md y en maquinas/ los ficheros"
+    echo "   que has editado en servidor, cliente y web (slapd, ldap.conf, /root, historial)"
+    echo "   y en copia/ tus máquinas completas. Súbelo a Moodle."
     [ -s respuestas.md ] || aviso "No encuentro respuestas.md con tus respuestas."
 }
 
@@ -412,6 +510,8 @@ case "${1:-ayuda}" in
     comprobar|check) cmd_comprobar ;;
     entregar)  cmd_entregar ;;
     parar|stop) cmd_parar ;;
+    guardar|save) cmd_guardar ;;
+    cargar)    cmd_cargar "${2:-}" ;;
     reset)     cmd_reset ;;
     ayuda|help|-h|--help) cmd_ayuda ;;
     *) error "No conozco la orden '$1'."; echo; cmd_ayuda; exit 1 ;;
