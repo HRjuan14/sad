@@ -115,8 +115,9 @@ vpn() {
     echo; info "wg show en el firewall:"; en firewall wg show
 }
 
-# Lo que se crea dentro de las máquinas (claves, wg0.conf) pasa a ser tuyo, para editarlo desde tu ordenador
-tuyo() { for m in firewall remoto; do corriendo "$m" && en "$m" chown -R "$(id -u):$(id -g)" /lab 2>/dev/null; done; }
+# Lo que se crea dentro de las máquinas (claves, wg0.conf) pasa a ser del dueño de la carpeta, para editarlo desde tu ordenador
+# (el arranque de cada máquina ya lo hace cada 2 s; esto es por si acaso, y vale también con sudo ./lab.sh)
+tuyo() { for m in firewall remoto; do corriendo "$m" && en "$m" sh -c 'chown -R "$(stat -c %u:%g /lab)" /lab' 2>/dev/null; done; }
 
 # ---------- comprobar la batería ----------
 # Cada prueba: número, descripción, máquina, orden, 💡 pista y (opcional) la prueba que tiene que funcionar antes.

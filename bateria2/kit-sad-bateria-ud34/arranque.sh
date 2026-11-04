@@ -20,6 +20,9 @@ pagina() {
 if [ -d /lab ]; then
   [ -f /lab/nftables.conf ] && ln -sf /lab/nftables.conf /etc/nftables.conf
   mkdir -p /lab/wireguard && rm -rf /etc/wireguard && ln -s /lab/wireguard /etc/wireguard
+  # Lo que se crea aquí dentro (claves, wg0.conf…) es de root y desde tu ordenador no podrías editarlo:
+  # cada 2 s pasa a ser del dueño de la carpeta (tú)
+  ( while sleep 2; do find /lab ! -user "$(stat -c %u /lab)" -exec chown -h "$(stat -c %u:%g /lab)" {} + 2>/dev/null; done ) &
 fi
 
 case "$ROL" in
