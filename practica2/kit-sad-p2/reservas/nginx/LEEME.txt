@@ -1,0 +1,5 @@
+✍️ D3. Crea aquí seguridad.conf: que Nginx no diga su versión y que mande las cabeceras
+       X-Frame-Options, X-Content-Type-Options y Content-Security-Policy (con «always»).
+
+Los .conf de esta carpeta se cargan dentro de «http» (valen para todas las webs del servidor de reservas).
+Después de cambiar algo:  ./lab.sh nginx

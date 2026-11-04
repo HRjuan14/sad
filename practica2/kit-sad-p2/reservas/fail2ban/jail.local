@@ -1,0 +1,10 @@
+# Fail2ban del servidor de reservas (bloque D · UD6). Después de cambiar algo:  ./lab.sh fail2ban
+[DEFAULT]
+# Cómo banea: con nftables (en este servidor no hay iptables)
+banaction = nftables-multiport
+
+# ✍️ D2. Activa la cárcel de SSH: 3 fallos en 10 minutos = 1 hora fuera.
+#        Fail2ban tiene que leer el registro de intentos de SSH, que en este servidor está en
+#        /var/log/auth.log  (en Debian busca por defecto en otro sitio que aquí no existe).
+[sshd]
+enabled = false

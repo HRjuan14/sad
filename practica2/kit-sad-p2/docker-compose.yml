@@ -1,0 +1,117 @@
+# Laboratorio de la Práctica 2 de SAD · Bodegas Atlántico. Se maneja con ./lab.sh (./lab.sh ayuda).
+#
+#   la calle 198.51.100.0/24             DMZ 172.16.20.0/24      LAN 172.16.10.0/24
+#   cliente .50 · enologa .61 · comercial .62   tienda .10          oficina .5 · erp .20
+#                 \___________ fw .254 (wan · dmz · lan) + VPN wg0 10.66.0.1 ___________/
+#
+# Lo que editas está en tu carpeta: fw/nftables.conf, fw/wireguard/, enologa/wireguard/ y comercial/wireguard/.
+name: sad-p2
+
+x-maquina: &maquina
+  build: .
+  image: sad-p2
+  cap_add: [NET_ADMIN, NET_RAW]
+  tty: true
+  stdin_open: true
+
+services:
+  fw:
+    <<: *maquina
+    container_name: sad-p2-fw
+    hostname: fw
+    environment: { ROL: fw }
+    sysctls:
+      net.ipv4.ip_forward: 1
+    volumes:
+      - ./fw:/lab        # carpeta entera (no ficheros sueltos: los editores los sustituyen y Docker no lo ve)
+    networks:
+      calle: { ipv4_address: 198.51.100.254 }
+      dmz: { ipv4_address: 172.16.20.254 }
+      lan: { ipv4_address: 172.16.10.254 }
+
+  tienda:
+    <<: *maquina
+    container_name: sad-p2-tienda
+    hostname: tienda
+    environment: { ROL: tienda }
+    networks: { dmz: { ipv4_address: 172.16.20.10 } }
+    depends_on: [fw]
+
+  oficina:
+    <<: *maquina
+    container_name: sad-p2-oficina
+    hostname: oficina
+    environment: { ROL: oficina }
+    networks: { lan: { ipv4_address: 172.16.10.5 } }
+    depends_on: [fw]
+
+  erp:
+    <<: *maquina
+    container_name: sad-p2-erp
+    hostname: erp
+    environment: { ROL: erp }
+    networks: { lan: { ipv4_address: 172.16.10.20 } }
+    depends_on: [fw]
+
+  cliente:
+    <<: *maquina
+    container_name: sad-p2-cliente
+    hostname: cliente
+    environment: { ROL: cliente }
+    networks: { calle: { ipv4_address: 198.51.100.50 } }
+    depends_on: [fw]
+
+  enologa:
+    <<: *maquina
+    container_name: sad-p2-enologa
+    hostname: enologa
+    environment: { ROL: enologa }
+    volumes:
+      - ./enologa:/lab
+    networks: { calle: { ipv4_address: 198.51.100.61 } }
+
+  comercial:
+    <<: *maquina
+    container_name: sad-p2-comercial
+    hostname: comercial
+    environment: { ROL: comercial }
+    volumes:
+      - ./comercial:/lab
+    networks: { calle: { ipv4_address: 198.51.100.62 } }
+
+  # ───────── Complemento · bloques C y D (solo arrancan con el perfil «cd», que ./lab.sh activa si existe waf/) ─────────
+
+  # Bloque C · el WAF: la imagen oficial de OWASP (Nginx + ModSecurity + Core Rule Set) delante de la tienda.
+  # Su modo está en waf/waf.env y las excepciones en waf/plugins/ (./lab.sh waf para aplicar los cambios)
+  waf:
+    image: owasp/modsecurity-crs:nginx@sha256:7698c48a41a43138ae317feeec964d1515b861cc1d9e50617bc1cdfe9f314e1d
+    container_name: sad-p2-waf
+    hostname: waf
+    profiles: [cd]
+    env_file: ./waf/waf.env
+    environment:
+      BACKEND: http://172.16.20.10:80
+      BLOCKING_PARANOIA: 1
+      ANOMALY_INBOUND: 5
+    volumes:
+      - ./waf/plugins:/opt/owasp-crs/plugins:ro
+    networks: { dmz: { ipv4_address: 172.16.20.30 } }
+    depends_on: [tienda]
+
+  # Bloque D · el servidor de reservas, «recién instalado y descuidado»: SSH, Nginx, Fail2ban y Lynis.
+  # Lo que editas vive en reservas/ (./lab.sh ssh · nginx · fail2ban · lynis)
+  reservas:
+    <<: *maquina
+    container_name: sad-p2-reservas
+    hostname: reservas
+    environment: { ROL: reservas }
+    profiles: [cd]
+    volumes:
+      - ./reservas:/lab
+    networks: { dmz: { ipv4_address: 172.16.20.40 } }
+    depends_on: [fw]
+
+networks:
+  calle: { ipam: { config: [{ subnet: 198.51.100.0/24, gateway: 198.51.100.1 }] } }
+  dmz: { internal: true, ipam: { config: [{ subnet: 172.16.20.0/24, gateway: 172.16.20.1 }] } }
+  lan: { internal: true, ipam: { config: [{ subnet: 172.16.10.0/24, gateway: 172.16.10.1 }] } }

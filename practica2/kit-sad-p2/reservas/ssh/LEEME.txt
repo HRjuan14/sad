@@ -1,0 +1,5 @@
+✍️ D1. Crea aquí bastionado.conf: root no entra por SSH, nadie entra con contraseña (solo con llave),
+       como mucho 3 intentos por conexión y sin X11.
+
+Los .conf de esta carpeta se leen ANTES que /etc/ssh/sshd_config, y en SSH manda el PRIMER valor que encuentra.
+Después de cambiar algo:  ./lab.sh ssh

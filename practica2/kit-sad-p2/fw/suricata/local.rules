@@ -1,0 +1,21 @@
+# ════════════════════════════════════════════════════════════════════════════════
+#  BODEGAS ATLÁNTICO · reglas de Suricata (bloque C · UD5)
+#
+#  Suricata vigila la CALLE (la interfaz wan del firewall), o sea ANTES del DNAT:
+#  la IP de destino que ve es la PÚBLICA de la bodega (198.51.100.254), no la de la tienda.
+#
+#  Edita este fichero y cárgalo con:   ./lab.sh reglas
+#  Mira las alertas con:                ./lab.sh alertas
+#
+#  👀 = hecho (léelo: te lo preguntarán).   ✍️ = tu turno (escribe la regla justo debajo).
+#  Cada regla lleva msg:"…" y un sid:… único (del 1000000 en adelante).
+# ════════════════════════════════════════════════════════════════════════════════
+
+# 👀 C0 · Alguien de la calle hace ping a la bodega. Así se lee una regla:
+#        alert  icmp  ORIGEN  ->  DESTINO  (opciones)
+alert icmp any any -> 198.51.100.254 any (msg:"LAB ping a la bodega desde la calle"; itype:8; sid:1000001; rev:1;)
+
+# ✍️ C1 · Fuerza bruta de SSH: avisa cuando una MISMA IP de la calle lanza MÁS DE 10 intentos de
+#         conexión (flags:S) al SSH de la bodega (puerto 22 de 198.51.100.254) en 60 segundos.
+#         Pistas: alert tcp … -> 198.51.100.254 22 (…; flags:S;
+#                 threshold: type threshold, track by_src, count 10, seconds 60)   sid:1000002
