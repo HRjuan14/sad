@@ -1,0 +1,108 @@
+Bloque A · el perímetro
+✔ 👀 A0 · El vigilante tiene política drop en input y en forward
+✔ 👀 A0b · Las oficinas entran al firewall por SSH
+✔ 👀 A0c · La calle NO entra al firewall por SSH
+✔ A1 · La memoria del vigilante (established,related) está en forward
+✔ A2 · Las oficinas navegan por la calle
+✔ A3 · Las oficinas ven la web de la tienda (80)
+✔ A3b · Las oficinas administran la tienda por SSH (22)
+✔ A4 · Desde la calle se ve la tienda en la IP de la bodega, puerto 80 (DNAT)
+✔ A4b · …y también por el 443
+✔ A4c · Desde la calle NO se llega al SSH de la tienda
+✔ A5 · La tienda consulta el stock en el ERP (5432)
+✔ A5b · La tienda NO llega a la intranet del ERP (8080)
+✔ A6 · La tienda NO entra en el PC de la oficina
+✔ A6b · El intento se cuenta (counter en la regla dmz -> lan)
+✔ A6c · La tienda NO sale a la calle (si la asaltan, no descarga nada)
+✔ A7 · Fuera ven la IP de la bodega, no la del PC (masquerade)
+✔ A8 · Desde la calle NO se llega a las oficinas (SSH del PC)
+✔ A9 · respuestas.md tiene la salida de nmap pegada
+
+Bloque B · el teletrabajo
+✘ 👀 B0 · La enóloga tiene túnel y se ha dado la mano con el firewall
+    💡 sigue los pasos 👀 del enunciado: claves, los dos wg0.conf y ./lab.sh vpn
+✘ 👀 B0b · La enóloga llega a la intranet del ERP (8080)
+    💡 ¿tienes el AllowedIPs de su portátil con la LAN? ¿y la regla 👀 B en forward?
+✘ B1 · El comercial tiene túnel (10.66.0.3) y se ha dado la mano con el firewall
+    💡 en TU fichero, TU llave y el CANDADO DEL OTRO; y en el fw, un [Peer] nuevo con el candado del comercial
+✘ B1b · En el firewall, cada persona entra solo con su IP (/32)
+    primero tiene que funcionar B1
+✘ B2 · El comercial llega a la intranet del ERP (8080)
+    primero tiene que funcionar B1
+✘ B3 · El comercial administra la tienda por SSH (22)
+    primero tiene que funcionar B1
+✘ B4 · La enóloga NO llega al SSH de la tienda
+    primero tiene que funcionar B3
+✘ B5 · Por la VPN nadie llega al PC de la oficina
+    primero tiene que funcionar B2
+✘ B6 · Por la VPN nadie llega a la base de datos (5432)
+    primero tiene que funcionar 👀 B0b
+✘ B7 · El portátil del comercial solo manda lo de la bodega por el túnel (split tunnel)
+    primero tiene que funcionar B1
+✘ B8 · respuestas.md tiene la captura de tcpdump pegada (UDP 51820)
+    💡 ./lab.sh fw  →  tcpdump -ni wan host 198.51.100.62 -c 6  (mientras el comercial hace un curl al ERP) y pega la salida
+
+Bloque C · IDS y WAF
+✔ 👀 C0 · El ping desde la calle salta como alerta (sid 1000001)
+✘ C1 · La fuerza bruta de SSH salta como alerta (sid 1000002)
+    💡 alert tcp any any -> 198.51.100.254 22 (…; flags:S; threshold: type threshold, track by_src, count 10, seconds 60; sid:1000002; rev:1;)
+
+Bloque C · WAF  (el 👀 de «solo mirando» lo ves con ./lab.sh bloqueos)
+✘ C2 · Una inyección SQL a la web recibe un 403 (el WAF bloquea)
+    💡 pon el WAF en la puerta (el DNAT que te damos + abrir el forward) y en waf/waf.env MODSEC_RULE_ENGINE=On, luego ./lab.sh waf
+✘ C2b · …y una visita normal sigue entrando (200), a través del WAF
+    primero tiene que funcionar C2
+✘ C2c · El WAF está de verdad en el camino (su cabecera Server)
+    primero tiene que funcionar C2
+✘ C3 · Una nota de cata con palabras raras ya no se bloquea en /catas (falso positivo)
+    primero tiene que funcionar C2
+✘ C3b · …pero un ataque en OTRO campo de /catas sigue bloqueado
+    primero tiene que funcionar C3
+✘ C3c · …y la misma nota en otra página también (la excepción es solo para /catas)
+    primero tiene que funcionar C3
+✘ C4 · respuestas.md explica qué ve Suricata y qué ve el WAF del mismo ataque
+    💡 contesta en respuestas.md la pregunta C4 (Suricata mira la red; el WAF lee la petición web)
+
+Bloque D · bastionado del servidor de reservas
+D1 · SSH
+✘ D1 · root no entra por SSH
+    💡 PermitRootLogin no en reservas/ssh/bastionado.conf (y ./lab.sh ssh)
+✘ D1b · Nadie entra con contraseña (solo con llave)
+    💡 PasswordAuthentication no
+✘ D1c · …y de verdad: la contraseña de root ya no sirve
+    💡 ¿has hecho ./lab.sh ssh? ¿el fichero acaba en .conf?
+✘ D1d · Como mucho 3 intentos y sin X11
+    💡 MaxAuthTries 3 · X11Forwarding no
+✘ D1e · El administrador sigue entrando con su llave (no te has dejado fuera)
+    💡 si cortas también las llaves (PubkeyAuthentication no), nadie podrá administrar el servidor
+
+D3 · Nginx
+✘ D3 · Nginx no dice su versión
+    💡 server_tokens off;
+✘ D3b · Manda X-Frame-Options, X-Content-Type-Options y CSP
+    💡 add_header … always;  (con «always» para que salgan también en los errores)
+
+D2 · Fail2ban
+✘ D2 · La cárcel de SSH está activa (3 fallos)
+    💡 en reservas/fail2ban/jail.local, [sshd]: enabled = true, maxretry = 3 … y ./lab.sh fail2ban
+✘ D2b · Tras los intentos fallidos, la IP de la tienda (el atacante) queda baneada
+    primero tiene que funcionar D2
+✘ D4 · respuestas.md trae la nota de Lynis (hardening index)
+    💡 ./lab.sh lynis, apunta la nota en respuestas.md y explica un aviso que quede
+
+Calidad
+✔ A · fw/nftables.conf es válido (nft -c)
+✔ A · Todas tus reglas de forward y de nat dicen para qué son (comment)
+✘ B · Falta algún wg0.conf o hay llaves privadas repetidas o compartidas
+    💡 cada máquina genera su llave; al otro solo se le da el candado (.pub)
+✘ B · Faltan reglas de la VPN o alguna no tiene comment
+✘ C · Alguna regla de Suricata no carga, no tiene msg o repite el sid
+✔ D · sshd -t y nginx -t del servidor de reservas sin errores
+
+Bloque A: 15 de 15 pruebas  →  funciona 7.0 de 7
+Bloque B: 0 de 9 pruebas  →  funciona 0.0 de 7
+Bloque C: 0 de 8 pruebas  →  funciona 0.0 de 7
+Bloque D: 0 de 10 pruebas  →  funciona 0.0 de 7
+Calidad: A 1.0 de 1 · B 0.0 de 1 · C 0 de 1 · D 1 de 1
+(el avance, 1,5, y la entrega con ./lab.sh entregar, 0,5, los pone el profesor al ver tu repositorio)
+(los 👀 no cuentan: son los ejemplos resueltos)
