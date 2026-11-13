@@ -19,28 +19,17 @@ Bloque A · el perímetro
 ✔ A9 · respuestas.md tiene la salida de nmap pegada
 
 Bloque B · el teletrabajo
-✘ 👀 B0 · La enóloga tiene túnel y se ha dado la mano con el firewall
-    💡 sigue los pasos 👀 del enunciado: claves, los dos wg0.conf y ./lab.sh vpn
-✘ 👀 B0b · La enóloga llega a la intranet del ERP (8080)
-    💡 ¿tienes el AllowedIPs de su portátil con la LAN? ¿y la regla 👀 B en forward?
-✘ B1 · El comercial tiene túnel (10.66.0.3) y se ha dado la mano con el firewall
-    💡 en TU fichero, TU llave y el CANDADO DEL OTRO; y en el fw, un [Peer] nuevo con el candado del comercial
-✘ B1b · En el firewall, cada persona entra solo con su IP (/32)
-    primero tiene que funcionar B1
-✘ B2 · El comercial llega a la intranet del ERP (8080)
-    primero tiene que funcionar B1
-✘ B3 · El comercial administra la tienda por SSH (22)
-    primero tiene que funcionar B1
-✘ B4 · La enóloga NO llega al SSH de la tienda
-    primero tiene que funcionar B3
-✘ B5 · Por la VPN nadie llega al PC de la oficina
-    primero tiene que funcionar B2
-✘ B6 · Por la VPN nadie llega a la base de datos (5432)
-    primero tiene que funcionar 👀 B0b
-✘ B7 · El portátil del comercial solo manda lo de la bodega por el túnel (split tunnel)
-    primero tiene que funcionar B1
-✘ B8 · respuestas.md tiene la captura de tcpdump pegada (UDP 51820)
-    💡 ./lab.sh fw  →  tcpdump -ni wan host 198.51.100.62 -c 6  (mientras el comercial hace un curl al ERP) y pega la salida
+✔ 👀 B0 · La enóloga tiene túnel y se ha dado la mano con el firewall
+✔ 👀 B0b · La enóloga llega a la intranet del ERP (8080)
+✔ B1 · El comercial tiene túnel (10.66.0.3) y se ha dado la mano con el firewall
+✔ B1b · En el firewall, cada persona entra solo con su IP (/32)
+✔ B2 · El comercial llega a la intranet del ERP (8080)
+✔ B3 · El comercial administra la tienda por SSH (22)
+✔ B4 · La enóloga NO llega al SSH de la tienda
+✔ B5 · Por la VPN nadie llega al PC de la oficina
+✔ B6 · Por la VPN nadie llega a la base de datos (5432)
+✔ B7 · El portátil del comercial solo manda lo de la bodega por el túnel (split tunnel)
+✔ B8 · respuestas.md tiene la captura de tcpdump pegada (UDP 51820)
 
 Bloque C · IDS y WAF
 ✔ 👀 C0 · El ping desde la calle salta como alerta (sid 1000001)
@@ -93,16 +82,15 @@ D2 · Fail2ban
 Calidad
 ✔ A · fw/nftables.conf es válido (nft -c)
 ✔ A · Todas tus reglas de forward y de nat dicen para qué son (comment)
-✘ B · Falta algún wg0.conf o hay llaves privadas repetidas o compartidas
-    💡 cada máquina genera su llave; al otro solo se le da el candado (.pub)
-✘ B · Faltan reglas de la VPN o alguna no tiene comment
+✔ B · Los tres wg0.conf existen y cada uno lleva su propia llave (ninguna repetida)
+✔ B · Las reglas de la VPN dicen para qué son (comment)
 ✘ C · Alguna regla de Suricata no carga, no tiene msg o repite el sid
 ✔ D · sshd -t y nginx -t del servidor de reservas sin errores
 
 Bloque A: 15 de 15 pruebas  →  funciona 7.0 de 7
-Bloque B: 0 de 9 pruebas  →  funciona 0.0 de 7
+Bloque B: 9 de 9 pruebas  →  funciona 7.0 de 7
 Bloque C: 0 de 8 pruebas  →  funciona 0.0 de 7
 Bloque D: 0 de 10 pruebas  →  funciona 0.0 de 7
-Calidad: A 1.0 de 1 · B 0.0 de 1 · C 0 de 1 · D 1 de 1
+Calidad: A 1.0 de 1 · B 1.0 de 1 · C 0 de 1 · D 1 de 1
 (el avance, 1,5, y la entrega con ./lab.sh entregar, 0,5, los pone el profesor al ver tu repositorio)
 (los 👀 no cuentan: son los ejemplos resueltos)
