@@ -30,7 +30,7 @@ root@cliente:/#
 
 Después de `./lab.sh comprobar`, mira `./lab.sh ver`. ¿Cuántos paquetes lleva el contador de A6? ¿Quién los ha mandado?
 
->
+> Lleva 6 paquetes y lo ha eviado la tienda
 
 ## Bloque B · La prueba del cifrado
 
@@ -38,12 +38,26 @@ En el firewall (`./lab.sh fw`): `tcpdump -ni wan host 198.51.100.62 -c 6`. Mient
 (`./lab.sh comercial`) hace `curl http://172.16.10.20:8080`. Pega lo que sale en el firewall:
 
 ```text
-(pega aquí la salida de tcpdump)
+hrjuan@LinuxCasa:~/asignaturas/SAD/sad/practica2/kit-sad-p2$ ./lab.sh fw
+root@fw:/# tcpdump -ni wan host 198.51.100.62 -c 6
+tcpdump: verbose output suppressed, use -v[v]... for full protocol decode
+listening on wan, link-type EN10MB (Ethernet), snapshot length 262144 bytes
+10:37:42.561920 IP 198.51.100.62.53989 > 198.51.100.254.51820: UDP, length 96
+10:37:42.563630 IP 198.51.100.254.51820 > 198.51.100.62.53989: UDP, length 96
+10:37:42.564188 IP 198.51.100.62.53989 > 198.51.100.254.51820: UDP, length 96
+10:37:42.564266 IP 198.51.100.62.53989 > 198.51.100.254.51820: UDP, length 176
+10:37:42.564775 IP 198.51.100.254.51820 > 198.51.100.62.53989: UDP, length 96
+10:37:42.564831 IP 198.51.100.254.51820 > 198.51.100.62.53989: UDP, length 304
+6 packets captured
+10 packets received by filter
+0 packets dropped by kernel
+
 ```
 
 En dos líneas: ¿qué se ve por la calle y qué NO se ve?
 
->
+> Lo que se ve por la calle es el trafico UDP cifrado por el puerto 51820 y no se ve
+> el trafico real las IPs privadas, peticiones HTTP ni datos al viajar encapsulado y cifrado
 
 ## Bloque C · Para la defensa (C4)
 
